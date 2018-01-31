@@ -1,4 +1,7 @@
 spring:
+  application:
+    name: movie-fun-app-mjc
+
   mvc.view:
     prefix: /WEB-INF/
     suffix: .jsp
