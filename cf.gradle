@@ -1,18 +1,19 @@
 def services = [
-    [type: "p-mysql", plan: "100mb", instance: "movie-database"],
-    [type: "p-mysql", plan: "100mb", instance: "album-database"],
-    [type: "p-identity", plan: "p-identity", instance: "movie-fun-sso"],
-    [type: "p-service-registry", plan: "standard", instance: "movie-fun-registry"],
-    [type: "p-config-server", plan: "standard", instance: "movie-fun-config", config: "config-server.json"],
+        [type: "p-mysql", plan: "100mb", instance: "movie-database"],
+        [type: "p-mysql", plan: "100mb", instance: "album-database"],
+        [type: "p-identity", plan: "basic-sso", instance: "movie-fun-sso"],
+        [type: "p-service-registry", plan: "standard", instance: "movie-fun-registry"],
+        [type: "p-config-server", plan: "standard", instance: "movie-fun-config", config: "config-server.json"],
+        [type: "p-circuit-breaker-dashboard", plan: "standard", instance: "movie-fun-circuit-breaker"],
 ]
 
 task teardownPcfEnv {
     doLast {
 
         [
-            "cf delete -f album-service",
-            "cf delete -f movie-service",
-            "cf delete -f movie-fun-app",
+                "cf delete -f album-service",
+                "cf delete -f movie-service",
+                "cf delete -f movie-fun-app-mjc",
         ].each { println it.execute().text }
 
         services.each {
@@ -67,14 +68,38 @@ task checkCfServices {
 
 task deploy {
     doLast {
-        "cf push".execute().in.eachLine { line ->
+        "cf push --no-start".execute().in.eachLine { line ->
             println line
         }
+    }
+}
+
+task setEnvVars {
+    doLast {
+        [
+                "cf set-env movie-fun-app S3_ACCESSKEY AKIAIRHHFUIRNTULG6TA",
+                "cf set-env movie-fun-app S3_BUCKETNAME cf-d623f550-4f71-46aa-af1b-5a185e9cea48",
+                "cf set-env movie-fun-app S3_ENDPOINTURL http://s3.amazonaws.com",
+                "cf set-env movie-fun-app S3_SECRETKEY 48K7hYZmSqZ+FXfdo5OmijE/wNkd/m3/Hoatpf7d",
+                "cf set-env movie-service S3_ACCESSKEY AKIAIRHHFUIRNTULG6TA",
+                "cf set-env movie-service S3_BUCKETNAME cf-d623f550-4f71-46aa-af1b-5a185e9cea48",
+                "cf set-env movie-service S3_ENDPOINTURL http://s3.amazonaws.com",
+                "cf set-env movie-service S3_SECRETKEY 48K7hYZmSqZ+FXfdo5OmijE/wNkd/m3/Hoatpf7d",
+                "cf set-env album-service S3_ACCESSKEY AKIAIRHHFUIRNTULG6TA",
+                "cf set-env album-service S3_BUCKETNAME cf-d623f550-4f71-46aa-af1b-5a185e9cea48",
+                "cf set-env album-service S3_ENDPOINTURL http://s3.amazonaws.com",
+                "cf set-env album-service S3_SECRETKEY 48K7hYZmSqZ+FXfdo5OmijE/wNkd/m3/Hoatpf7d",
+        ].each { println it.execute().text }
+
+        "cf restage movie-fun-app".execute().in.eachLine { println it }
+        "cf restage album-service".execute().in.eachLine { println it }
+        "cf restage movie-service".execute().in.eachLine { println it }
     }
 }
 
 setupPcfEnv.mustRunAfter teardownPcfEnv
 checkCfServices.mustRunAfter setupPcfEnv
 deploy.mustRunAfter checkCfServices
+setEnvVars.mustRunAfter deploy
 
-task resetPcfEnv(dependsOn: [teardownPcfEnv, setupPcfEnv, checkCfServices, deploy])
+task resetPcfEnv(dependsOn: [teardownPcfEnv, setupPcfEnv, checkCfServices, deploy, setEnvVars])
