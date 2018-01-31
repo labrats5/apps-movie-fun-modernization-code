@@ -6,18 +6,24 @@ services:
 - movie-fun-registry
 applications:
 - name: album-service
+  routes:
+  - route: album-service-mjc.apps.cumuluslabs.io
   path: applications/album-service/build/libs/album-service-1.1.0-SNAPSHOT.jar
   services:
   - album-database
   env:
     GRANT_TYPE: client_credentials
 - name: movie-service
+  routes:
+  - route: movie-service-mjc.apps.cumuluslabs.io
   path: applications/movie-service/build/libs/movie-service-1.1.0-SNAPSHOT.jar
   services:
   - movie-database
   env:
     GRANT_TYPE: client_credentials
 - name: movie-fun-app
+  routes:
+  - route: movie-fun-app-mjc.apps.cumuluslabs.io
   path: applications/movie-fun-app/build/libs/movie-fun-app-1.1.0-SNAPSHOT.war
   services:
   - movie-fun-config
