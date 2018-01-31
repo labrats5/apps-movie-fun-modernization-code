@@ -1,29 +1,40 @@
 def services = [
-    [type: "p-mysql", plan: "100mb", instance: "movie-database"],
-    [type: "p-mysql", plan: "100mb", instance: "album-database"],
-    [type: "p-identity", plan: "p-identity", instance: "movie-fun-sso"],
-    [type: "p-service-registry", plan: "standard", instance: "movie-fun-registry"],
+        [type: "p-mysql", plan: "100mb", instance: "movie-database"],
+        [type: "p-mysql", plan: "100mb", instance: "album-database"],
+        [type: "p-identity", plan: "basic-sso", instance: "movie-fun-sso"],
+        [type: "p-service-registry", plan: "standard", instance: "movie-fun-registry"],
+        [type: "p-config-server", plan: "standard", instance: "movie-fun-config", config: "config-server.json"],
 ]
 
 task teardownPcfEnv {
     doLast {
 
         [
-            "cf delete -f album-service",
-            "cf delete -f movie-service",
-            "cf delete -f movie-fun-app",
+                "cf delete -f album-service",
+                "cf delete -f movie-service",
+                "cf delete -f movie-fun-app-mjc",
         ].each { println it.execute().text }
 
         services.each {
-            println "cf delete -f $it.instance".execute().text
+            println "cf delete-service -f $it.instance".execute().text
         }
     }
+}
+
+def createServiceCommand(service) {
+    def command = "cf create-service $service.type $service.plan $service.instance"
+
+    if (service.config != null) {
+        command += " -c $service.config"
+    }
+
+    return command
 }
 
 task setupPcfEnv {
     doLast {
         services.each {
-            println "cf create-service $it.type $it.plan $it.instance".execute().text
+            println createServiceCommand(it).execute().text
         }
     }
 }
@@ -59,6 +70,27 @@ task deploy {
         "cf push".execute().in.eachLine { line ->
             println line
         }
+    }
+}
+
+task bindEnv {
+    doLast {
+        [
+                "cf set-env movie-fun-app-mjc S3_ACCESSKEY AKIAIRHHFUIRNTULG6TA",
+                "cf set-env movie-fun-app-mjc S3_BUCKETNAME cf-d623f550-4f71-46aa-af1b-5a185e9cea48",
+                "cf set-env movie-fun-app-mjc S3_ENDPOINTURL http://s3.amazonaws.com",
+                "cf set-env movie-fun-app-mjc S3_SECRETKEY 48K7hYZmSqZ+FXfdo5OmijE/wNkd/m3/Hoatpf7d",
+
+                "cf set-env movie-service S3_ACCESSKEY AKIAIRHHFUIRNTULG6TA",
+                "cf set-env movie-service S3_BUCKETNAME cf-d623f550-4f71-46aa-af1b-5a185e9cea48",
+                "cf set-env movie-service S3_ENDPOINTURL http://s3.amazonaws.com",
+                "cf set-env movie-service S3_SECRETKEY 48K7hYZmSqZ+FXfdo5OmijE/wNkd/m3/Hoatpf7d",
+
+                "cf set-env album-service S3_ACCESSKEY AKIAIRHHFUIRNTULG6TA",
+                "cf set-env album-service S3_BUCKETNAME cf-d623f550-4f71-46aa-af1b-5a185e9cea48",
+                "cf set-env album-service S3_ENDPOINTURL http://s3.amazonaws.com",
+                "cf set-env album-service S3_SECRETKEY 48K7hYZmSqZ+FXfdo5OmijE/wNkd/m3/Hoatpf7d"
+        ].each { println it.execute().text }
     }
 }
 
